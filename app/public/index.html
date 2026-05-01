@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blue-Green Deployment Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Animated grid background -->
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow env-glow" aria-hidden="true"></div>
+
+  <div class="shell">
+
+    <!-- ── HEADER ──────────────────────────────────────────── -->
+    <header class="site-header">
+      <div class="header-brand">
+        <span class="brand-icon" aria-hidden="true">⬡</span>
+        <span class="brand-name">DeployWatch</span>
+      </div>
+      <div class="header-meta">
+        <span class="live-badge" id="liveBadge">
+          <span class="live-dot"></span> LIVE
+        </span>
+        <span class="header-time" id="headerTime">--:--:--</span>
+      </div>
+    </header>
+
+    <!-- ── HERO STATUS ─────────────────────────────────────── -->
+    <section class="hero-section">
+      <div class="env-chip" id="envChip">
+        <span class="env-chip-label">ACTIVE ENVIRONMENT</span>
+        <span class="env-chip-value" id="envValue">—</span>
+      </div>
+      <h1 class="hero-title">Deployment<br /><em id="heroEnvLabel">Dashboard</em></h1>
+      <p class="hero-sub">Zero-Downtime Blue-Green on AWS EC2 · Docker · Nginx · GitHub Actions</p>
+    </section>
+
+    <!-- ── PRIMARY STAT CARDS ──────────────────────────────── -->
+    <div class="stat-grid">
+
+      <div class="stat-card stat-card--primary" id="cardEnv">
+        <div class="stat-card__icon">&#9650;</div>
+        <div class="stat-card__label">Environment</div>
+        <div class="stat-card__value" id="statEnv">—</div>
+        <div class="stat-card__sub">Active Slot</div>
+      </div>
+
+      <div class="stat-card" id="cardVersion">
+        <div class="stat-card__icon">&#9632;</div>
+        <div class="stat-card__label">Version</div>
+        <div class="stat-card__value mono" id="statVersion">—</div>
+        <div class="stat-card__sub">Deployed Build</div>
+      </div>
+
+      <div class="stat-card" id="cardInstance">
+        <div class="stat-card__icon">&#9675;</div>
+        <div class="stat-card__label">Instance ID</div>
+        <div class="stat-card__value mono small" id="statInstance">—</div>
+        <div class="stat-card__sub">AWS EC2</div>
+      </div>
+
+      <div class="stat-card" id="cardUptime">
+        <div class="stat-card__icon">&#9670;</div>
+        <div class="stat-card__label">Uptime</div>
+        <div class="stat-card__value mono" id="statUptime">—</div>
+        <div class="stat-card__sub">Process Seconds</div>
+      </div>
+
+    </div>
+
+    <!-- ── SYSTEM METRICS ──────────────────────────────────── -->
+    <section class="metrics-section">
+      <h2 class="section-title">System Metrics</h2>
+      <div class="metrics-grid">
+
+        <div class="metric-row">
+          <span class="metric-key">Hostname</span>
+          <span class="metric-val mono" id="mHostname">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-key">Node.js Version</span>
+          <span class="metric-val mono" id="mNode">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-key">Platform</span>
+          <span class="metric-val mono" id="mPlatform">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-key">CPU Cores</span>
+          <span class="metric-val mono" id="mCpu">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-key">Total Memory</span>
+          <span class="metric-val mono" id="mTotalMem">—</span>
+        </div>
+
+        <div class="metric-row">
+          <span class="metric-key">Free Memory</span>
+          <span class="metric-val mono" id="mFreeMem">—</span>
+        </div>
+
+        <div class="metric-row metric-row--wide">
+          <span class="metric-key">Memory Usage</span>
+          <div class="meter-wrap">
+            <div class="meter-bar" id="memMeter"></div>
+            <span class="meter-label" id="memPct">—</span>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <span class="metric-key">Load Average</span>
+          <span class="metric-val mono" id="mLoad">—</span>
+        </div>
+
+        <div class="metric-row">
+          <span class="metric-key">Last Refreshed</span>
+          <span class="metric-val mono" id="mTimestamp">—</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── ENDPOINT TESTER ─────────────────────────────────── -->
+    <section class="endpoints-section">
+      <h2 class="section-title">Endpoint Tester</h2>
+      <div class="endpoint-grid">
+
+        <div class="endpoint-card" id="epHealth">
+          <div class="ep-header">
+            <span class="ep-method">GET</span>
+            <span class="ep-path">/health</span>
+          </div>
+          <p class="ep-desc">Health probe used by the CI/CD pipeline to validate deployment readiness.</p>
+          <button class="ep-btn" onclick="testEndpoint('/health', 'epHealth')">Run Check</button>
+          <pre class="ep-result" id="epHealthResult"></pre>
+        </div>
+
+        <div class="endpoint-card" id="epLoad">
+          <div class="ep-header">
+            <span class="ep-method">GET</span>
+            <span class="ep-path">/load</span>
+          </div>
+          <p class="ep-desc">Simulate CPU stress for <strong>5 seconds</strong> to test load behaviour.</p>
+          <button class="ep-btn" onclick="testEndpoint('/load?duration=5', 'epLoad')">Trigger Load</button>
+          <pre class="ep-result" id="epLoadResult"></pre>
+        </div>
+
+        <div class="endpoint-card" id="epInfo">
+          <div class="ep-header">
+            <span class="ep-method">GET</span>
+            <span class="ep-path">/api/info</span>
+          </div>
+          <p class="ep-desc">Full system information JSON payload served by this instance.</p>
+          <button class="ep-btn" onclick="testEndpoint('/api/info', 'epInfo')">Fetch Info</button>
+          <pre class="ep-result" id="epInfoResult"></pre>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── DEPLOYMENT FLOW ─────────────────────────────────── -->
+    <section class="flow-section">
+      <h2 class="section-title">Deployment Flow</h2>
+      <div class="flow-track">
+        <div class="flow-step" style="--i:0">
+          <div class="flow-icon">①</div>
+          <div class="flow-label">Push to<br/>main</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="--i:1">
+          <div class="flow-icon">②</div>
+          <div class="flow-label">Build &amp;<br/>Push ECR</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="--i:2">
+          <div class="flow-icon">③</div>
+          <div class="flow-label">Deploy Idle<br/>Container</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="--i:3">
+          <div class="flow-icon">④</div>
+          <div class="flow-label">Health<br/>Check</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="--i:4">
+          <div class="flow-icon">⑤</div>
+          <div class="flow-label">Nginx<br/>Symlink</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" style="--i:5">
+          <div class="flow-icon">⑥</div>
+          <div class="flow-label">Zero<br/>Downtime ✓</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── FOOTER ──────────────────────────────────────────── -->
+    <footer class="site-footer">
+      <span>Built with Node.js · Docker · Nginx · AWS ECR · GitHub Actions</span>
+      <span class="footer-sep">·</span>
+      <span>Blue-Green Zero-Downtime Deployment</span>
+    </footer>
+
+  </div><!-- /shell -->
+
+  <script>
+    // ── Live clock ─────────────────────────────────────────────────────────────
+    function tick() {
+      document.getElementById('headerTime').textContent =
+        new Date().toLocaleTimeString('en-US', { hour12: false });
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    // ── Theme application ──────────────────────────────────────────────────────
+    function applyEnvTheme(env) {
+      const root = document.documentElement;
+      const isBlue = env.toLowerCase() === 'blue';
+      root.setAttribute('data-env', isBlue ? 'blue' : 'green');
+
+      document.getElementById('envValue').textContent = env.toUpperCase();
+      document.getElementById('heroEnvLabel').textContent = env.charAt(0).toUpperCase() + env.slice(1);
+      document.getElementById('envChip').setAttribute('data-env', env.toLowerCase());
+      document.getElementById('cardEnv').setAttribute('data-env', env.toLowerCase());
+      document.getElementById('statEnv').textContent = env.toUpperCase();
+    }
+
+    // ── Format seconds → Hh Mm Ss ─────────────────────────────────────────────
+    function fmtUptime(s) {
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      return [h && `${h}h`, m && `${m}m`, `${sec}s`].filter(Boolean).join(' ');
+    }
+
+    // ── Fetch & render dashboard data ──────────────────────────────────────────
+    async function refresh() {
+      try {
+        const res = await fetch('/api/info');
+        const d = await res.json();
+
+        applyEnvTheme(d.environment);
+
+        document.getElementById('statVersion').textContent  = `v${d.version}`;
+        document.getElementById('statInstance').textContent = d.instanceId;
+        document.getElementById('statUptime').textContent   = fmtUptime(d.uptime);
+
+        document.getElementById('mHostname').textContent  = d.hostname;
+        document.getElementById('mNode').textContent      = d.nodeVersion;
+        document.getElementById('mPlatform').textContent  = d.platform;
+        document.getElementById('mCpu').textContent       = `${d.cpuCores} cores`;
+        document.getElementById('mTotalMem').textContent  = `${d.totalMemMb} MB`;
+        document.getElementById('mFreeMem').textContent   = `${d.freeMemMb} MB`;
+        document.getElementById('mLoad').textContent      = d.loadAvg.join(' / ');
+        document.getElementById('mTimestamp').textContent = new Date(d.timestamp).toLocaleTimeString();
+
+        const usedPct = Math.round(((d.totalMemMb - d.freeMemMb) / d.totalMemMb) * 100);
+        document.getElementById('memMeter').style.width = `${usedPct}%`;
+        document.getElementById('memPct').textContent   = `${usedPct}%`;
+        document.getElementById('memMeter').className   = `meter-bar${usedPct > 80 ? ' meter-bar--warn' : ''}`;
+
+      } catch (e) {
+        console.error('Refresh failed:', e);
+      }
+    }
+
+    // ── Endpoint tester ────────────────────────────────────────────────────────
+    async function testEndpoint(url, cardId) {
+      const resultEl = document.getElementById(cardId + 'Result');
+      const card = document.getElementById(cardId);
+      resultEl.textContent = 'Fetching…';
+      card.classList.add('ep-loading');
+
+      try {
+        const t0 = performance.now();
+        const res = await fetch(url);
+        const ms = Math.round(performance.now() - t0);
+        const data = await res.json();
+        resultEl.textContent = `HTTP ${res.status}  (${ms}ms)\n\n` + JSON.stringify(data, null, 2);
+        card.classList.remove('ep-loading');
+        card.classList.add('ep-done');
+        setTimeout(() => card.classList.remove('ep-done'), 2000);
+      } catch (err) {
+        resultEl.textContent = `Error: ${err.message}`;
+        card.classList.remove('ep-loading');
+      }
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────────
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

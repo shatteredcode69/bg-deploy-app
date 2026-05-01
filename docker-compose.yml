@@ -1,0 +1,71 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  docker-compose.yml  –  Blue/Green Service Definitions
+#
+#  Both containers run simultaneously on the host. Nginx (managed outside
+#  Compose) routes live traffic by toggling a symlink between
+#  /etc/nginx/conf.d/blue.conf  and  /etc/nginx/conf.d/green.conf.
+#
+#  Usage:
+#    docker compose up -d blue    # start/restart blue slot
+#    docker compose up -d green   # start/restart green slot
+#    docker compose ps            # check status
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Blue slot ──────────────────────────────────────────────────────────────
+  blue:
+    image: ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG:-latest}
+    container_name: bg-blue
+    restart: unless-stopped
+    ports:
+      - "3001:3000"   # host:container  –  Nginx proxies 3001 for blue
+    environment:
+      - ENV_COLOR=blue
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      - PORT=3000
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bg-net
+
+  # ── Green slot ─────────────────────────────────────────────────────────────
+  green:
+    image: ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG:-latest}
+    container_name: bg-green
+    restart: unless-stopped
+    ports:
+      - "3002:3000"   # host:container  –  Nginx proxies 3002 for green
+    environment:
+      - ENV_COLOR=green
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      - PORT=3000
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bg-net
+
+networks:
+  bg-net:
+    driver: bridge
+    name: bg-network
