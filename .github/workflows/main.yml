@@ -15,7 +15,7 @@
 #    EC2_SSH_KEY             – PEM private key (multi-line secret)
 # ─────────────────────────────────────────────────────────────────────────────
 
-name: Blue-Green Deploy
+name: bg-deploy-app
 
 on:
   push:
